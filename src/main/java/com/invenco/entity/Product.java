@@ -14,8 +14,10 @@ public class Product {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+	
 	@NotBlank(message = "Product name must not be blank")
 	private String productName;
+	
 	private Double price;
 	private Long stockQuantity;
 

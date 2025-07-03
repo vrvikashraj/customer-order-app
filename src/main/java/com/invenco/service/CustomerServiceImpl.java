@@ -19,7 +19,7 @@ public class CustomerServiceImpl implements CustomerService {
 	@Override
 	public CustomerDto createCustomer(CustomerDto customerDto) {
 		if (customerRepository.existsByEmail(customerDto.getEmail())) {
-			throw new DuplicateResourceException("Custome already exists with email : " + customerDto.getEmail());
+			throw new DuplicateResourceException("Customer already exists with email : " + customerDto.getEmail());
 		}
 		Customer customer = mapper.map(customerDto, Customer.class);
 		return mapper.map(customerRepository.save(customer), CustomerDto.class);

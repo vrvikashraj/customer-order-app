@@ -1,8 +1,11 @@
 package com.invenco.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class CustomerDto {
 	private Long id;
 	private String name;
+	@NotBlank(message = "Email must not be blank")
 	private String email;
 
 	public Long getId() {

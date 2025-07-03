@@ -9,6 +9,7 @@ public class OrderDto {
 	private Boolean isPremiumOrder;
 	private Long customerId;
 	private List<Long> productIds;
+	private Double totalPrice;
 
 	public Long getId() {
 		return id;
@@ -48,6 +49,14 @@ public class OrderDto {
 
 	public void setProductIds(List<Long> productIds) {
 		this.productIds = productIds;
+	}
+
+	public Double getTotalPrice() {
+		return totalPrice;
+	}
+
+	public void setTotalPrice(Double totalPrice) {
+		this.totalPrice = totalPrice;
 	}
 
 }

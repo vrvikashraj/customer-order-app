@@ -15,7 +15,6 @@ import com.invenco.dto.OrderRequest;
 import com.invenco.entity.Customer;
 import com.invenco.entity.Order;
 import com.invenco.entity.Product;
-import com.invenco.exception.ProductOutOfStockException;
 import com.invenco.exception.ResourceNotFoundException;
 import com.invenco.repository.CustomerRepository;
 import com.invenco.repository.OrderRepository;
@@ -32,26 +31,20 @@ public class OrderServiceImpl implements OrderService {
 	@Autowired
 	private ProductRepository productRepository;
 	@Autowired
+	private StockManagementService stockManagementService;
+	@Autowired
 	private ModelMapper mapper;
 
 	@Transactional
 	public OrderDto createOrder(OrderRequest request) {
 		Customer customer = customerRepository.findById(request.getCustomerId()).orElseThrow(
 				() -> new ResourceNotFoundException("Customer not found with Id: " + request.getCustomerId()));
-		List<Product> orderedProducts = new ArrayList<>();
-
-		for (OrderProductRequest orderProdReq : request.getProducts()) {
-			Product product = productRepository.findById(orderProdReq.getProductId()).orElseThrow(
-					() -> new ResourceNotFoundException("Product not found with Id: " + orderProdReq.getProductId()));
-			orderedProducts.add(product);
-			if (product.getStockQuantity() <= 0 || product.getStockQuantity() < orderProdReq.getQuantity()) {
-				throw new ProductOutOfStockException("Product out of stock: " + product.getProductName());
-			}
-			product.setStockQuantity(product.getStockQuantity() - orderProdReq.getQuantity());
-		}
+		stockManagementService.updateProductStock(request.getProducts());
+		List<Product> orderedProducts = productRepository.findAllById(
+				request.getProducts().stream().map(OrderProductRequest::getProductId).collect(Collectors.toList()));
 		productRepository.saveAll(orderedProducts);
 		Double totalPrice = orderedProducts.stream().mapToDouble(op -> op.getPrice() * op.getStockQuantity()).sum();
-		boolean premium = totalPrice > 5000;
+		boolean premium = totalPrice > 500;
 
 		Order order = new Order();
 		order.setCustomer(customer);
@@ -63,7 +56,7 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	@Override
-	public List<OrderDto> getOrdersByCustomer(Long customerId) {
+	public List<OrderDto> getOrdersByCustomer(Long customerId, Double minValue) {
 		List<Order> orders = orderRepository.findByCustomerId(customerId);
 		return orders.stream().map(order -> {
 			OrderDto dto = new OrderDto();
@@ -71,13 +64,15 @@ public class OrderServiceImpl implements OrderService {
 			dto.setOrderDate(order.getOrderDate());
 			dto.setIsPremiumOrder(order.getIsPremiumOrder());
 			dto.setCustomerId(order.getCustomer().getId());
-
 			List<Long> productIds = order.getProducts() != null
 					? order.getProducts().stream().map(Product::getId).collect(Collectors.toList())
 					: new ArrayList<>();
 			dto.setProductIds(productIds);
+			final double totalPrice = order.getProducts() != null ? order.getProducts().stream()
+					.filter(p -> p.getPrice() != null).mapToDouble(Product::getPrice).sum() : 0.0;
+			dto.setTotalPrice(totalPrice);
 
 			return dto;
-		}).collect(Collectors.toList());
+		}).filter(dto -> minValue == null || dto.getTotalPrice() >= minValue).collect(Collectors.toList());
 	}
 }
